@@ -51,7 +51,7 @@ rm -rf %{buildroot}
 
 %files  
 %defattr (-,root,root)
-/usr/local/hospital
+/usr/local/gohttpd
 /usr/lib/systemd/system
 
 %postun
