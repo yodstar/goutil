@@ -1,0 +1,12 @@
+[Unit]
+Description=Findgo Gohttpd Service
+After=network.target
+
+[Service]
+Type=simple
+LimitNOFILE=1024000
+ExecStart=/usr/local/gohttpd/gohttpd
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
