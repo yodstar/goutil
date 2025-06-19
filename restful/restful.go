@@ -49,7 +49,11 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Action
 	if len(pathInfo) > 1 {
-		actionName = strings.Title(strings.ToLower(pathInfo[1]))
+		a := strings.Split(pathInfo[1], "-")
+		for i, v := range a {
+			a[i] = strings.ToUpper(string(v[0])) + strings.ToLower(v[1:])
+		}
+		actionName = strings.Join(a, "")
 	}
 	if actionName == "" {
 		actionName = "Index"
