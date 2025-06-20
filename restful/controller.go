@@ -135,9 +135,9 @@ func (c *Controller) WriteJSON(v interface{}) (err error) {
 }
 
 // Controller.WriteHTML
-func (c *Controller) WriteHTML(html string) (err error) {
+func (c *Controller) WriteHTML(html ...string) (err error) {
 	c.Ctx.ResponseWriter.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, err = c.Ctx.ResponseWriter.Write([]byte(html))
+	_, err = c.Ctx.ResponseWriter.Write([]byte(strings.Join(html, "")))
 	return err
 }
 
