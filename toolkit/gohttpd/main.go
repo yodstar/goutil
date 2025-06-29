@@ -7,10 +7,11 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func main() {
-	file := flag.String("c", "./gohttpd.conf", "Config file path")
+	conf := flag.String("c", "./gohttpd.conf", "Config file path")
 	flag.Parse()
 
 	// chroot
@@ -21,7 +22,7 @@ func main() {
 	}
 
 	// config
-	data, err := ioutil.ReadFile(*file)
+	data, err := ioutil.ReadFile(*conf)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -36,7 +37,21 @@ func main() {
 
 	// routes
 	for route, path := range config.Routes {
-		http.Handle(route, http.StripPrefix(route, http.FileServer(http.Dir(path))))
+		if strings.HasSuffix(route, "*") {
+			f := path
+			d := filepath.Dir(path)
+			p := strings.TrimSuffix(route, "*")
+			http.HandleFunc(p, func(w http.ResponseWriter, r *http.Request) {
+				file := filepath.Join(d, strings.TrimPrefix(r.URL.Path, p))
+				if info, _ := os.Stat(file); info != nil && info.Mode().IsRegular() {
+					http.ServeFile(w, r, file)
+				} else {
+					http.ServeFile(w, r, f)
+				}
+			})
+		} else {
+			http.Handle(route, http.StripPrefix(route, http.FileServer(http.Dir(path))))
+		}
 	}
 
 	// listen
