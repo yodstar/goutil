@@ -3,7 +3,8 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"io/ioutil"
+	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -11,32 +12,34 @@ import (
 )
 
 func main() {
-	conf := flag.String("c", "./gohttpd.conf", "Config file path")
-	flag.Parse()
-
-	// chroot
-	if exefile, err := os.Executable(); err != nil {
-		panic(err.Error())
-	} else if err = os.Chdir(filepath.Dir(exefile)); err != nil {
-		panic(err.Error())
-	}
-
-	// config
-	data, err := ioutil.ReadFile(*conf)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	config := struct {
+	var name string
+	conf := struct {
 		Routes map[string]string
 		Listen string
 	}{}
-	if err := json.Unmarshal(data, &config); err != nil {
+
+	//chroot
+	if file, err := os.Executable(); err != nil {
 		panic(err.Error())
+	} else if err = os.Chdir(filepath.Dir(file)); err != nil {
+		panic(err.Error())
+	} else {
+		name = strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))
+		path := flag.String("c", fmt.Sprintf("./%s.conf", name), "Config file path")
+		flag.Parse()
+
+		data, err := os.ReadFile(*path)
+		if err != nil {
+			panic(err.Error())
+		}
+
+		if err := json.Unmarshal(data, &conf); err != nil {
+			panic(err.Error())
+		}
 	}
 
 	// routes
-	for route, path := range config.Routes {
+	for route, path := range conf.Routes {
 		if strings.HasSuffix(route, "*") {
 			f := path
 			d := filepath.Dir(path)
@@ -55,7 +58,8 @@ func main() {
 	}
 
 	// listen
-	if err := http.ListenAndServe(config.Listen, nil); err != nil {
+	log.Printf("%s listen on %s", name, conf.Listen)
+	if err := http.ListenAndServe(conf.Listen, nil); err != nil {
 		panic(err.Error())
 	}
 }
