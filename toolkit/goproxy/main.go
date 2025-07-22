@@ -69,7 +69,7 @@ func main() {
 						time.Sleep(time.Millisecond * 10)
 						continue
 					}
-					s := fmt.Sprintf("%s <- %s %v\n", dial.LocalAddr(), dial.RemoteAddr(), data[0:n])
+					s := fmt.Sprintf("%s <- %s %d %v\n", dial.LocalAddr(), dial.RemoteAddr(), n, data[0:n])
 					if *o != "" {
 						file.WriteString(s)
 					} else {
@@ -93,7 +93,7 @@ func main() {
 					continue
 				}
 
-				s := fmt.Sprintf("%s -> %s %v\n", dial.LocalAddr(), dial.RemoteAddr(), data[0:n])
+				s := fmt.Sprintf("%s -> %s %d %v\n", dial.LocalAddr(), dial.RemoteAddr(), n, data[0:n])
 				if *o != "" {
 					file.WriteString(s)
 				} else {
