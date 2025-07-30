@@ -39,17 +39,21 @@ func main() {
 	}
 
 	// routes
+	rewrite := make(map[string]string)
 	for route, path := range conf.Routes {
 		if strings.HasSuffix(route, "*") {
-			f := path
-			d := filepath.Dir(path)
-			p := strings.TrimSuffix(route, "*")
-			http.HandleFunc(p, func(w http.ResponseWriter, r *http.Request) {
-				file := filepath.Join(d, strings.TrimPrefix(r.URL.Path, p))
-				if info, _ := os.Stat(file); info != nil && info.Mode().IsRegular() {
-					http.ServeFile(w, r, file)
-				} else {
-					http.ServeFile(w, r, f)
+			prefix := strings.TrimSuffix(route, "*")
+			rewrite[prefix] = path
+			http.HandleFunc(prefix, func(w http.ResponseWriter, r *http.Request) {
+				for prefix, path := range rewrite {
+					if strings.HasPrefix(r.URL.Path, prefix) {
+						file := filepath.Join(filepath.Dir(path), strings.TrimPrefix(r.URL.Path, prefix))
+						if info, _ := os.Stat(file); info != nil && info.Mode().IsRegular() {
+							http.ServeFile(w, r, file)
+						} else {
+							http.ServeFile(w, r, path)
+						}
+					}
 				}
 			})
 		} else {
