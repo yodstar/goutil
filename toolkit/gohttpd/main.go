@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -45,17 +47,33 @@ func main() {
 			prefix := strings.TrimSuffix(route, "*")
 			rewrite[prefix] = path
 			http.HandleFunc(prefix, func(w http.ResponseWriter, r *http.Request) {
-				for prefix, path := range rewrite {
-					if strings.HasPrefix(r.URL.Path, prefix) {
-						file := filepath.Join(filepath.Dir(path), strings.TrimPrefix(r.URL.Path, prefix))
-						if info, _ := os.Stat(file); info != nil && info.Mode().IsRegular() {
-							http.ServeFile(w, r, file)
-						} else {
-							http.ServeFile(w, r, path)
-						}
-					}
+				path := rewrite[prefix]
+				file := filepath.Join(filepath.Dir(path), strings.TrimPrefix(r.URL.Path, prefix))
+				if info, _ := os.Stat(file); info != nil && info.Mode().IsRegular() {
+					http.ServeFile(w, r, file)
+				} else {
+					http.ServeFile(w, r, path)
 				}
 			})
+		} else if strings.HasPrefix(path, "http://") {
+			target, err := url.Parse(path)
+			if err != nil {
+				panic(err.Error())
+			}
+			proxy := httputil.NewSingleHostReverseProxy(target)
+			proxy.Director = func(req *http.Request) {
+				req.URL.Scheme = target.Scheme
+				req.URL.Host = target.Host
+				req.Host = target.Host
+				req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
+			}
+			proxy.ModifyResponse = func(resp *http.Response) error {
+				resp.Header.Set("Access-Control-Allow-Origin", "*")
+				resp.Header.Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+				resp.Header.Set("Access-Control-Allow-Headers", "Content-Type")
+				return nil
+			}
+			http.Handle(route, proxy)
 		} else {
 			http.Handle(route, http.StripPrefix(route, http.FileServer(http.Dir(path))))
 		}
