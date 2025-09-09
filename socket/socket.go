@@ -163,7 +163,7 @@ func sockError(err error) error {
 			file = "???"
 			line = 0
 		}
-		file = file[strings.LastIndex(file, "/findgo")+1:]
+		file = file[strings.LastIndex(file, "/goutil")+1:]
 		err = fmt.Errorf("%s (%s:%d)", err, file, line)
 	}
 	return err

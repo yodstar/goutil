@@ -11,7 +11,7 @@ import (
 )
 
 // FramePrefix - Frame:<[Prefix:<[]byte>] [Length:<uint32>] [Content:<[]byte>]>
-var FramePrefix = []byte{'Y', 'O', 'D', 'S', 'T', 'A', 'R'}
+var FramePrefix = []byte{0, 0, 0, 0}
 
 // IContext
 type IContext interface {
@@ -72,13 +72,14 @@ func (c *Context) Shutdown() (err error) {
 }
 
 // Context.FrameUnpack
-func (c *Context) FrameUnpack(conn *Conn) (io.Reader, error) {
+func (c *Context) FrameUnpack(conn *Conn) ([]byte, io.Reader, error) {
 	var err error
 	var b byte
 
 	bufr := bufio.NewReader(conn.Conn)
 	// Prefix
 	pos := 0
+	prefix := make([]byte, len(FramePrefix))
 	for {
 		b, err = bufr.ReadByte()
 		if err != nil {
