@@ -72,6 +72,7 @@ func main() {
 					s := fmt.Sprintf("%s <- %s %d %v\n", dial.LocalAddr(), dial.RemoteAddr(), n, data[0:n])
 					if *o != "" {
 						file.WriteString(s)
+						file.Sync()
 					} else {
 						fmt.Print(s)
 					}
@@ -96,6 +97,7 @@ func main() {
 				s := fmt.Sprintf("%s -> %s %d %v\n", dial.LocalAddr(), dial.RemoteAddr(), n, data[0:n])
 				if *o != "" {
 					file.WriteString(s)
+					file.Sync()
 				} else {
 					fmt.Print(s)
 				}
