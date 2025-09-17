@@ -39,6 +39,7 @@ func main() {
 			panic(err.Error())
 		}
 	}
+	log.SetFlags(log.Lshortfile)
 
 	// routes
 	rewrite := make(map[string]string)
@@ -61,12 +62,6 @@ func main() {
 				panic(err.Error())
 			}
 			proxy := httputil.NewSingleHostReverseProxy(target)
-			proxy.Director = func(req *http.Request) {
-				req.URL.Scheme = target.Scheme
-				req.URL.Host = target.Host
-				req.Host = target.Host
-				req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
-			}
 			proxy.ModifyResponse = func(resp *http.Response) error {
 				resp.Header.Set("Access-Control-Allow-Origin", "*")
 				resp.Header.Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
