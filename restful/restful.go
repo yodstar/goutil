@@ -103,6 +103,10 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // ServeFile
 func (h *httpHandler) ServeFile(w http.ResponseWriter, r *http.Request) {
+	if h.root == "" {
+		http.NotFound(w, r)
+		return
+	}
 	if path.Ext(r.URL.Path) != "" {
 		http.ServeFile(w, r, h.root+r.URL.Path)
 	} else {
@@ -120,8 +124,10 @@ func ListenTLS(root, addr, cert, key string) {
 	var err error
 	// Handler
 	h := &httpHandler{}
-	if h.root, err = filepath.Abs(root); err != nil {
-		log.Fatal(err.Error())
+	if root != "" {
+		if h.root, err = filepath.Abs(root); err != nil {
+			log.Fatal(err.Error())
+		}
 	}
 	h.pool.New = func() interface{} {
 		return &Context{}
@@ -139,8 +145,10 @@ func Listen(root, addr string) {
 	var err error
 	// Handler
 	h := &httpHandler{}
-	if h.root, err = filepath.Abs(root); err != nil {
-		log.Fatal(err.Error())
+	if root != "" {
+		if h.root, err = filepath.Abs(root); err != nil {
+			log.Fatal(err.Error())
+		}
 	}
 	h.pool.New = func() interface{} {
 		return &Context{}
