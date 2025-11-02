@@ -3,7 +3,6 @@ package sqlbuilder
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"reflect"
 	"runtime"
 	"strings"
@@ -14,20 +13,18 @@ import (
 )
 
 var (
-	isDebugMode    = false
-	hasModelSuffix = false
+	sqlDaoSuffix   = "_dao"
 	sqlbuilderName = "sqlbuilder"
-	errNotBindDB   = fmt.Errorf("not bind DB yet")
+	errNotBindDb   = fmt.Errorf("not bind Db yet")
 )
 
-// SetDebugMode
-func SetDebugMode(mode bool) {
-	isDebugMode = mode
-}
-
-// SetModelSuffix
-func SetModelSuffix(has bool) {
-	hasModelSuffix = has
+// SetDaoSuffix
+func SetDaoSuffix(suffix string) {
+	if strings.HasPrefix(suffix, "_") {
+		sqlDaoSuffix = strings.ToLower(suffix)
+	} else {
+		sqlDaoSuffix = "_" + strings.ToLower(suffix)
+	}
 }
 
 // Init
@@ -36,11 +33,11 @@ func Init(name string) bool {
 	return true
 }
 
-// SQLBuilder
-type SQLBuilder struct {
-	*dbSQLBuilder
-	db           *DB
-	bindValue    interface{}
+// SqlBuilder
+type SqlBuilder struct {
+	*dbSqlBuilder
+	dao          *Dao
+	bindValue    any
 	tableName    string
 	sqlFields    string
 	sqlUpdates   string
@@ -51,31 +48,24 @@ type SQLBuilder struct {
 	sqlHaving    string
 	sqlOrderBy   string
 	sqlLimit     string
-	sqlArgs      []interface{}
+	sqlArgs      []any
 	IsSliceValue bool
-	IsDebugMode  bool
 	Result       sql.Result
 	Error        error
 }
 
-// SQLBuilder.Debug
-func (sb *SQLBuilder) Debug(mode bool) *SQLBuilder {
-	sb.IsDebugMode = mode
-	return sb
-}
-
-// SQLBuilder.Table
-func (sb *SQLBuilder) Table(tableName string) *SQLBuilder {
+// SqlBuilder.Table
+func (sb *SqlBuilder) Table(tableName string) *SqlBuilder {
 	sb.tableName = tableName
 	return sb
 }
 
-// SQLBuilder.Fields
-func (sb *SQLBuilder) Fields(fields string) *SQLBuilder {
+// SqlBuilder.Fields
+func (sb *SqlBuilder) Fields(fields string) *SqlBuilder {
 	uf := []string{}
 	vf := []string{}
 	sf := strings.Split(fields, ",")
-	for i, _ := range sf {
+	for i := range sf {
 		f := strings.TrimSpace(sf[i])
 		uf = append(uf, fmt.Sprintf("%s = :%s", f, f))
 		vf = append(uf, fmt.Sprintf(":%s", f))
@@ -87,8 +77,8 @@ func (sb *SQLBuilder) Fields(fields string) *SQLBuilder {
 	return sb
 }
 
-// SQLBuilder.Where
-func (sb *SQLBuilder) Where(where string, args ...interface{}) *SQLBuilder {
+// SqlBuilder.Where
+func (sb *SqlBuilder) Where(where string, args ...any) *SqlBuilder {
 	if sb.sqlWhere == "" {
 		sb.sqlWhere = fmt.Sprintf("(%s)", where)
 	} else {
@@ -98,8 +88,8 @@ func (sb *SQLBuilder) Where(where string, args ...interface{}) *SQLBuilder {
 	return sb
 }
 
-// SQLBuilder.WhereOr
-func (sb *SQLBuilder) WhereOr(where string, args ...interface{}) *SQLBuilder {
+// SqlBuilder.WhereOr
+func (sb *SqlBuilder) WhereOr(where string, args ...any) *SqlBuilder {
 	if sb.sqlWhere == "" {
 		sb.sqlWhere = fmt.Sprintf("(%s)", where)
 	} else {
@@ -109,8 +99,8 @@ func (sb *SQLBuilder) WhereOr(where string, args ...interface{}) *SQLBuilder {
 	return sb
 }
 
-// SQLBuilder.WhereNot
-func (sb *SQLBuilder) WhereNot(where string, args ...interface{}) *SQLBuilder {
+// SqlBuilder.WhereNot
+func (sb *SqlBuilder) WhereNot(where string, args ...any) *SqlBuilder {
 	if sb.sqlWhere == "" {
 		sb.sqlWhere = fmt.Sprintf("NOT (%s)", where)
 	} else {
@@ -120,149 +110,134 @@ func (sb *SQLBuilder) WhereNot(where string, args ...interface{}) *SQLBuilder {
 	return sb
 }
 
-// SQLBuilder.GroupBy
-func (sb *SQLBuilder) GroupBy(groupBy string) *SQLBuilder {
+// SqlBuilder.GroupBy
+func (sb *SqlBuilder) GroupBy(groupBy string) *SqlBuilder {
 	sb.sqlGroupBy = fmt.Sprintf(" GROUP BY %s", groupBy)
 	return sb
 }
 
-// SQLBuilder.Having
-func (sb *SQLBuilder) Having(having string) *SQLBuilder {
+// SqlBuilder.Having
+func (sb *SqlBuilder) Having(having string) *SqlBuilder {
 	sb.sqlHaving = fmt.Sprintf(" HAVING %s", having)
 	return sb
 }
 
-// SQLBuilder.OrderBy
-func (sb *SQLBuilder) OrderBy(orderBy string) *SQLBuilder {
+// SqlBuilder.OrderBy
+func (sb *SqlBuilder) OrderBy(orderBy string) *SqlBuilder {
 	sb.sqlOrderBy = fmt.Sprintf(" ORDER BY %s", orderBy)
 	return sb
 }
 
-// SQLBuilder.Limit
-func (sb *SQLBuilder) Limit(offset int) *SQLBuilder {
+// SqlBuilder.Limit
+func (sb *SqlBuilder) Limit(offset int) *SqlBuilder {
 	sb.sqlLimit = fmt.Sprintf(" LIMIT %d", offset)
 	return sb
 }
 
-// SQLBuilder.Count
-func (sb *SQLBuilder) Count(count *int64) *SQLBuilder {
-	if sb.db == nil {
-		sb.Error = sqlError(errNotBindDB)
+// SqlBuilder.Count
+func (sb *SqlBuilder) Count(count *int64) *SqlBuilder {
+	if sb.dao == nil {
+		sb.Error = sqlError(errNotBindDb)
 		return sb
 	}
 	where := fmt.Sprintf("%s%s%s%s%s", sb.sqlWhere, sb.sqlGroupBy, sb.sqlHaving, sb.sqlOrderBy, sb.sqlLimit)
-	query, args, err := sb.BuildCountSQL(where, sb.sqlArgs...)
+	query, args, err := sb.buildCountSQL(where, sb.sqlArgs...)
 	if err != nil {
 		sb.Error = sqlError(err)
 		return sb
 	}
-	sb.Error = sqlError(sb.db.QueryRowx(query, args...).Scan(count))
-	if sb.IsDebugMode {
-		log.Println("[DEBUG]", query, args)
-	}
+	sb.Error = sqlError(sb.dao.QueryRowx(query, args...).Scan(count))
 	return sb
 }
 
-// SQLBuilder.Select
-func (sb *SQLBuilder) Select(dest interface{}) *SQLBuilder {
-	if sb.db == nil {
-		sb.Error = sqlError(errNotBindDB)
+// SqlBuilder.Select
+func (sb *SqlBuilder) Select(dst any) *SqlBuilder {
+	if sb.dao == nil {
+		sb.Error = sqlError(errNotBindDb)
 		return sb
 	}
-	if dest != nil {
-		sb.Model(dest)
+	if dst != nil {
+		sb.Dao(dst)
 	}
 	where := fmt.Sprintf("%s%s%s%s%s", sb.sqlWhere, sb.sqlGroupBy, sb.sqlHaving, sb.sqlOrderBy, sb.sqlLimit)
-	query, args, err := sb.BuildSelectSQL(where, sb.sqlArgs...)
+	query, args, err := sb.buildSelectSQL(where, sb.sqlArgs...)
 	if err != nil {
 		sb.Error = err
 		return sb
 	}
 	if sb.IsSliceValue {
-		sb.Error = sqlError(sb.db.Selectx(sb.bindValue, query, args...))
+		sb.Error = sqlError(sb.dao.Selectx(sb.bindValue, query, args...))
 	} else {
-		sb.Error = sqlError(sb.db.QueryRowx(query, args...).StructScan(sb.bindValue))
-	}
-	if sb.IsDebugMode {
-		log.Println("[DEBUG]", query, args, sb.Error)
+		sb.Error = sqlError(sb.dao.QueryRowx(query, args...).StructScan(sb.bindValue))
 	}
 	return sb
 }
 
-// SQLBuilder.Update
-func (sb *SQLBuilder) Update(dest ...interface{}) *SQLBuilder {
-	if sb.db == nil {
-		sb.Error = sqlError(errNotBindDB)
+// SqlBuilder.Update
+func (sb *SqlBuilder) Update(dst ...any) *SqlBuilder {
+	if sb.dao == nil {
+		sb.Error = sqlError(errNotBindDb)
 		return sb
 	}
-	if len(dest) > 0 {
-		sb.Model(dest[0])
+	if len(dst) > 0 {
+		sb.Dao(dst[0])
 	}
-	query, args, err := sb.BuildUpdateSQL(sb.sqlWhere, sb.sqlArgs...)
+	query, args, err := sb.buildUpdateSQL(sb.sqlWhere, sb.sqlArgs...)
 	if err != nil {
 		sb.Error = err
 		return sb
 	}
-	sb.Result, sb.Error = sb.db.Exec(query, args...)
+	sb.Result, sb.Error = sb.dao.Exec(query, args...)
 	if sb.Error != nil {
 		sb.Error = sqlError(sb.Error)
-	}
-	if sb.IsDebugMode {
-		log.Println("[DEBUG]", query, args, sb.Error)
 	}
 	return sb
 }
 
-// SQLBuilder.Delete
-func (sb *SQLBuilder) Delete(dest ...interface{}) *SQLBuilder {
-	if sb.db == nil {
-		sb.Error = sqlError(errNotBindDB)
+// SqlBuilder.Delete
+func (sb *SqlBuilder) Delete(dst ...any) *SqlBuilder {
+	if sb.dao == nil {
+		sb.Error = sqlError(errNotBindDb)
 		return sb
 	}
-	if len(dest) > 0 {
-		sb.Model(dest[0])
+	if len(dst) > 0 {
+		sb.Dao(dst[0])
 	}
-	query, args, err := sb.BuildDeleteSQL(sb.sqlWhere, sb.sqlArgs...)
+	query, args, err := sb.buildDeleteSQL(sb.sqlWhere, sb.sqlArgs...)
 	if err != nil {
 		sb.Error = err
 		return sb
 	}
-	sb.Result, sb.Error = sb.db.Exec(query, args...)
+	sb.Result, sb.Error = sb.dao.Exec(query, args...)
 	if sb.Error != nil {
 		sb.Error = sqlError(sb.Error)
-	}
-	if sb.IsDebugMode {
-		log.Println("[DEBUG]", query, args, sb.Error)
 	}
 	return sb
 }
 
-// SQLBuilder.Insert
-func (sb *SQLBuilder) Insert(dest ...interface{}) *SQLBuilder {
-	if sb.db == nil {
-		sb.Error = sqlError(errNotBindDB)
+// SqlBuilder.Insert
+func (sb *SqlBuilder) Insert(dst ...any) *SqlBuilder {
+	if sb.dao == nil {
+		sb.Error = sqlError(errNotBindDb)
 		return sb
 	}
-	if len(dest) > 0 {
-		sb.Model(dest[0])
+	if len(dst) > 0 {
+		sb.Dao(dst[0])
 	}
-	query, args, err := sb.BuildInsertSQL()
+	query, args, err := sb.buildInsertSQL()
 	if err != nil {
 		sb.Error = err
 		return sb
 	}
-	sb.Result, sb.Error = sb.db.Exec(query, args...)
+	sb.Result, sb.Error = sb.dao.Exec(query, args...)
 	if sb.Error != nil {
 		sb.Error = sqlError(sb.Error)
-	}
-	if sb.IsDebugMode {
-		log.Println("[DEBUG]", query, args, sb.Error)
 	}
 	return sb
 }
 
-// SQLBuilder.BuildCountSQL
-func (sb *SQLBuilder) BuildCountSQL(where string, args ...interface{}) (query string, argv []interface{}, err error) {
+// SqlBuilder.buildCountSQL
+func (sb *SqlBuilder) buildCountSQL(where string, args ...any) (query string, argv []any, err error) {
 	if sb.Error != nil {
 		err = sb.Error
 		return
@@ -279,8 +254,8 @@ func (sb *SQLBuilder) BuildCountSQL(where string, args ...interface{}) (query st
 	return
 }
 
-// SQLBuilder.BuildSelectSQL
-func (sb *SQLBuilder) BuildSelectSQL(where string, args ...interface{}) (query string, argv []interface{}, err error) {
+// SqlBuilder.buildSelectSQL
+func (sb *SqlBuilder) buildSelectSQL(where string, args ...any) (query string, argv []any, err error) {
 	if sb.Error != nil {
 		err = sb.Error
 		return
@@ -297,8 +272,8 @@ func (sb *SQLBuilder) BuildSelectSQL(where string, args ...interface{}) (query s
 	return
 }
 
-// SQLBuilder.BuildDeleteSQL
-func (sb *SQLBuilder) BuildDeleteSQL(where string, args ...interface{}) (query string, argv []interface{}, err error) {
+// SqlBuilder.buildDeleteSQL
+func (sb *SqlBuilder) buildDeleteSQL(where string, args ...any) (query string, argv []any, err error) {
 	if sb.Error != nil {
 		err = sb.Error
 		return
@@ -315,8 +290,8 @@ func (sb *SQLBuilder) BuildDeleteSQL(where string, args ...interface{}) (query s
 	return
 }
 
-// SQLBuilder.BuildUpdateSQL
-func (sb *SQLBuilder) BuildUpdateSQL(where string, args ...interface{}) (query string, argv []interface{}, err error) {
+// SqlBuilder.buildUpdateSQL
+func (sb *SqlBuilder) buildUpdateSQL(where string, args ...any) (query string, argv []any, err error) {
 	if sb.Error != nil {
 		err = sb.Error
 		return
@@ -343,8 +318,8 @@ func (sb *SQLBuilder) BuildUpdateSQL(where string, args ...interface{}) (query s
 	return
 }
 
-// SQLBuilder.BuildInsertSQL
-func (sb *SQLBuilder) BuildInsertSQL() (query string, argv []interface{}, err error) {
+// SqlBuilder.buildInsertSQL
+func (sb *SqlBuilder) buildInsertSQL() (query string, argv []any, err error) {
 	if sb.Error != nil {
 		err = sb.Error
 		return
@@ -361,8 +336,8 @@ func (sb *SQLBuilder) BuildInsertSQL() (query string, argv []interface{}, err er
 	return
 }
 
-// SQLBuilder.Model
-func (sb *SQLBuilder) Model(value interface{}) *SQLBuilder {
+// SqlBuilder.Dao
+func (sb *SqlBuilder) Dao(value any) *SqlBuilder {
 	rv := reflect.ValueOf(value)
 	if rv.Kind() != reflect.Ptr {
 		sb.Error = sqlError(fmt.Errorf("expected %s but got %s", reflect.Ptr, rv.Kind()))
@@ -381,54 +356,52 @@ func (sb *SQLBuilder) Model(value interface{}) *SQLBuilder {
 		return sb
 	}
 	sb.bindValue = value
-	if sb.dbSQLBuilder != nil {
+	if sb.dbSqlBuilder != nil {
 		return sb
 	}
-	sb.dbSQLBuilder = cachedDBSQLBuilder(rt)
+	sb.dbSqlBuilder = cachedDbSqlBuilder(rt)
 	if sb.tableName == "" {
-		sb.tableName = sb.dbSQLBuilder.tableName
+		sb.tableName = sb.dbSqlBuilder.tableName
 	}
 	if sb.sqlFields == "" {
-		sb.sqlFields = sb.dbSQLBuilder.sqlFields
-		sb.sqlUpdates = sb.dbSQLBuilder.sqlUpdates
-		sb.sqlColumns = sb.dbSQLBuilder.sqlColumns
-		sb.sqlValues = sb.dbSQLBuilder.sqlValues
+		sb.sqlFields = sb.dbSqlBuilder.sqlFields
+		sb.sqlUpdates = sb.dbSqlBuilder.sqlUpdates
+		sb.sqlColumns = sb.dbSqlBuilder.sqlColumns
+		sb.sqlValues = sb.dbSqlBuilder.sqlValues
 	}
 	return sb
 }
 
-// SQLBuilder.Database
-func (sb *SQLBuilder) Database(db *DB) *SQLBuilder {
-	sb.db = db
+// SqlBuilder.Database
+func (sb *SqlBuilder) Database(dao *Dao) *SqlBuilder {
+	sb.dao = dao
 	return sb
 }
 
-// NewSQLBuilder
-func NewSQLBuilder(value interface{}) (sb *SQLBuilder) {
-	sb = &SQLBuilder{
-		IsDebugMode: isDebugMode,
-		sqlArgs:     []interface{}{},
+// NewSqlBuilder
+func NewSqlBuilder(value any) (sb *SqlBuilder) {
+	sb = &SqlBuilder{
+		sqlArgs: []any{},
 	}
 	if value != nil {
-		sb.Model(value)
+		sb.Dao(value)
 	}
 	return
 }
 
-// DBSQLBuilder
-func DBSQLBuilder(db *DB) (sb *SQLBuilder) {
-	sb = &SQLBuilder{
-		IsDebugMode: isDebugMode,
-		sqlArgs:     []interface{}{},
+// DbSqlBuilder
+func DbSqlBuilder(dao *Dao) (sb *SqlBuilder) {
+	sb = &SqlBuilder{
+		sqlArgs: []any{},
 	}
-	if db != nil {
-		sb.db = db
+	if dao != nil {
+		sb.dao = dao
 	}
 	return
 }
 
-// dbSQLBuilder
-type dbSQLBuilder struct {
+// dbSqlBuilder
+type dbSqlBuilder struct {
 	tableName  string
 	sqlFields  string
 	sqlUpdates string
@@ -436,20 +409,20 @@ type dbSQLBuilder struct {
 	sqlValues  string
 }
 
-var dbSQLBuilderCache sync.Map // map[reflect.Type]dbSQLBuilder
+var dbSqlBuilderCache sync.Map // map[reflect.Type]dbSqlBuilder
 
-// cachedDBSQLBuilder
-func cachedDBSQLBuilder(rt reflect.Type) *dbSQLBuilder {
-	if sb, ok := dbSQLBuilderCache.Load(rt); ok {
-		return sb.(*dbSQLBuilder)
+// cachedDbSqlBuilder
+func cachedDbSqlBuilder(rt reflect.Type) *dbSqlBuilder {
+	if sb, ok := dbSqlBuilderCache.Load(rt); ok {
+		return sb.(*dbSqlBuilder)
 	}
-	sb, _ := dbSQLBuilderCache.LoadOrStore(rt, reflectDBSQLBuilder(rt))
-	return sb.(*dbSQLBuilder)
+	sb, _ := dbSqlBuilderCache.LoadOrStore(rt, reflectDbSqlBuilder(rt))
+	return sb.(*dbSqlBuilder)
 }
 
-// reflectDBSQLBuilder
-func reflectDBSQLBuilder(rt reflect.Type) (sb *dbSQLBuilder) {
-	sb = &dbSQLBuilder{}
+// reflectDbSqlBuilder
+func reflectDbSqlBuilder(rt reflect.Type) (sb *dbSqlBuilder) {
+	sb = &dbSqlBuilder{}
 	if rm := reflect.New(rt).MethodByName("TableName"); rm.IsValid() {
 		sb.tableName = rm.Call(nil)[0].Interface().(string)
 	} else {
@@ -463,11 +436,7 @@ func reflectDBSQLBuilder(rt reflect.Type) (sb *dbSQLBuilder) {
 			}
 			r = append(r, c)
 		}
-		if hasModelSuffix {
-			sb.tableName = strings.TrimSuffix(string(r), "_model")
-		} else {
-			sb.tableName = string(r)
-		}
+		sb.tableName = strings.TrimSuffix(string(r), sqlDaoSuffix)
 	}
 	var fields, columns, updates, values []string
 	if rt.Kind() == reflect.Struct {
@@ -514,7 +483,7 @@ func sqlError(err error) error {
 			file = "???"
 			line = 0
 		}
-		file = file[strings.LastIndex(file, "/findgo")+1:]
+		file = file[strings.LastIndex(file, "/goutil")+1:]
 		err = fmt.Errorf("%s (%s:%d)", err, file, line)
 	}
 	return err

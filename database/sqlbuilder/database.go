@@ -4,343 +4,370 @@ import (
 	"database/sql"
 	"log"
 	"math/rand"
+	"strings"
 
 	"github.com/jmoiron/sqlx"
 )
 
-// Conf
-type Conf struct {
+// Option
+type Option struct {
 	DataSourceName string
 	MaxOpenConns   int
 	MaxIdleConns   int
+	IsDebugMode    bool
 }
 
-// DB
-type DB struct {
-	conn []*Conn
+// Options
+type Options []*Option
+
+// Dao
+type Dao struct {
+	unsafe bool
+	db     []*Db
+	n      int
 }
 
 // MustOpen
-func MustOpen(driverName string, conf []*Conf) *DB {
-	db := &DB{}
-	db.conn = make([]*Conn, len(conf))
-	for i, v := range conf {
-		c := &Conn{r: sqlx.MustOpen(driverName, v.DataSourceName)}
+func MustOpen(driverName string, option any) *Dao {
+	dao := &Dao{}
+	if options, ok := option.(Options); ok {
+		dao.db = make([]*Db, len(options))
+		for i, v := range options {
+			x := &Db{r: sqlx.MustOpen(driverName, v.DataSourceName)}
+			if v.MaxOpenConns > 0 {
+				x.r.SetMaxOpenConns(v.MaxOpenConns)
+			}
+			if v.MaxIdleConns > 0 {
+				x.r.SetMaxIdleConns(v.MaxIdleConns)
+			}
+			x.isDebugMode = v.IsDebugMode
+			x.r.Ping()
+			if i == 0 {
+				x.w = x.r
+			}
+			dao.db[i] = x
+		}
+	} else if v, ok := option.(Option); ok {
+		dao.db = make([]*Db, 1)
+		x := &Db{r: sqlx.MustOpen(driverName, v.DataSourceName)}
 		if v.MaxOpenConns > 0 {
-			c.r.SetMaxOpenConns(v.MaxOpenConns)
+			x.r.SetMaxOpenConns(v.MaxOpenConns)
 		}
 		if v.MaxIdleConns > 0 {
-			c.r.SetMaxIdleConns(v.MaxIdleConns)
+			x.r.SetMaxIdleConns(v.MaxIdleConns)
 		}
-		c.r.Ping()
-		if i == 0 {
-			c.w = c.r
-		}
-		db.conn[i] = c
+		x.isDebugMode = v.IsDebugMode
+		x.r.Ping()
+		x.w = x.r
+		dao.db[0] = x
 	}
-	return db
+	dao.n = len(dao.db)
+	return dao
 }
 
-// DB.Writer
-func (db *DB) Writer() *Conn {
-	if err := db.conn[0].Ping(); err != nil {
-		log.Println(err.Error())
+// Dao.Writer
+func (d *Dao) Unsafe(ok bool) *Dao {
+	d.unsafe = ok
+	return d
+}
+
+// Dao.Writer
+func (d *Dao) Writer() *Db {
+	if d == nil || d.n == 0 {
+		log.Panicln(errNotBindDb)
 	}
-	return db.conn[0]
+	return d.db[0]
 }
 
-// DB.Reader
-func (db *DB) Reader() *Conn {
-	c := db.conn[rand.Intn(len(db.conn))]
-	if err := c.Ping(); err != nil {
-		log.Println(err.Error())
+// Dao.Reader
+func (d *Dao) Reader() *Db {
+	if d == nil || d.n == 0 {
+		log.Panicln(errNotBindDb)
 	}
-	return c
+	return d.db[rand.Intn(d.n)]
 }
 
-// Deprecated: DB.Writerx
-func (db *DB) Writerx() *sqlx.DB {
-	if err := db.conn[0].Ping(); err != nil {
-		log.Println(err.Error())
-	}
-	return db.conn[0].w
+// Dao.Table
+func (d *Dao) Table(tableName string) *SqlBuilder {
+	return DbSqlBuilder(d).Table(tableName)
 }
 
-// Deprecated: DB.Readerx
-func (db *DB) Readerx() *sqlx.DB {
-	c := db.conn[rand.Intn(len(db.conn))]
-	if err := c.Ping(); err != nil {
-		log.Println(err.Error())
-	}
-	return c.r
+// Dao.Fields
+func (d *Dao) Fields(fields string) *SqlBuilder {
+	return DbSqlBuilder(d).Fields(fields)
 }
 
-// DB.Debug
-func (db *DB) Debug(mode bool) *SQLBuilder {
-	return DBSQLBuilder(db).Debug(mode)
+// Dao.Where
+func (d *Dao) Where(where string, args ...any) *SqlBuilder {
+	return DbSqlBuilder(d).Where(where, args...)
 }
 
-// DB.Table
-func (db *DB) Table(tableName string) *SQLBuilder {
-	return DBSQLBuilder(db).Table(tableName)
+// Dao.WhereOr
+func (d *Dao) WhereOr(where string, args ...any) *SqlBuilder {
+	return DbSqlBuilder(d).WhereOr(where, args...)
 }
 
-// DB.Fields
-func (db *DB) Fields(fields string) *SQLBuilder {
-	return DBSQLBuilder(db).Fields(fields)
+// Dao.WhereNot
+func (d *Dao) WhereNot(where string, args ...any) *SqlBuilder {
+	return DbSqlBuilder(d).WhereNot(where, args...)
 }
 
-// DB.Where
-func (db *DB) Where(where string, args ...interface{}) *SQLBuilder {
-	return DBSQLBuilder(db).Where(where, args...)
+// Dao.GroupBy
+func (d *Dao) GroupBy(group string) *SqlBuilder {
+	return DbSqlBuilder(d).GroupBy(group)
 }
 
-// DB.WhereOr
-func (db *DB) WhereOr(where string, args ...interface{}) *SQLBuilder {
-	return DBSQLBuilder(db).WhereOr(where, args...)
+// Dao.Having
+func (d *Dao) Having(having string) *SqlBuilder {
+	return DbSqlBuilder(d).Having(having)
 }
 
-// DB.WhereNot
-func (db *DB) WhereNot(where string, args ...interface{}) *SQLBuilder {
-	return DBSQLBuilder(db).WhereNot(where, args...)
+// Dao.OrderBy
+func (d *Dao) OrderBy(order string) *SqlBuilder {
+	return DbSqlBuilder(d).OrderBy(order)
 }
 
-// DB.GroupBy
-func (db *DB) GroupBy(group string) *SQLBuilder {
-	return DBSQLBuilder(db).GroupBy(group)
+// Dao.Limit
+func (d *Dao) Limit(offset int) *SqlBuilder {
+	return DbSqlBuilder(d).Limit(offset)
 }
 
-// DB.Having
-func (db *DB) Having(having string) *SQLBuilder {
-	return DBSQLBuilder(db).Having(having)
+// Dao.Count
+func (d *Dao) Count(dst any, where string, args ...any) (int64, error) {
+	return d.Reader().Count(dst, where, args...)
 }
 
-// DB.OrderBy
-func (db *DB) OrderBy(order string) *SQLBuilder {
-	return DBSQLBuilder(db).OrderBy(order)
+// Dao.Select
+func (d *Dao) Select(dst any, where string, args ...any) error {
+	return d.Reader().Select(dst, where, args...)
 }
 
-// DB.Limit
-func (db *DB) Limit(offset int) *SQLBuilder {
-	return DBSQLBuilder(db).Limit(offset)
+// Dao.Update
+func (d *Dao) Update(dst any, where string, args ...any) (sql.Result, error) {
+	return d.Writer().Update(dst, where, args...)
 }
 
-// DB.Count
-func (db *DB) Count(dest interface{}, where string, args ...interface{}) (int64, error) {
-	return db.Reader().Count(dest, where, args...)
+// Dao.Delete
+func (d *Dao) Delete(dst any, where string, args ...any) (sql.Result, error) {
+	return d.Writer().Delete(dst, where, args...)
 }
 
-// DB.Select
-func (db *DB) Select(dest interface{}, where string, args ...interface{}) error {
-	return db.Reader().Select(dest, where, args...)
+// Dao.Insert
+func (d *Dao) Insert(dst any) (sql.Result, error) {
+	return d.Writer().Insert(dst)
 }
 
-// DB.Update
-func (db *DB) Update(dest interface{}, where string, args ...interface{}) (sql.Result, error) {
-	return db.Writer().Update(dest, where, args...)
+// Dao.Queryx
+func (d *Dao) Queryx(query string, args ...any) (*sqlx.Rows, error) {
+	return d.Reader().Queryx(query, args...)
 }
 
-// DB.Delete
-func (db *DB) Delete(dest interface{}, where string, args ...interface{}) (sql.Result, error) {
-	return db.Writer().Delete(dest, where, args...)
+// Dao.QueryRowx
+func (d *Dao) QueryRowx(query string, args ...any) *sqlx.Row {
+	return d.Reader().QueryRowx(query, args...)
 }
 
-// DB.Insert
-func (db *DB) Insert(dest interface{}) (sql.Result, error) {
-	return db.Writer().Insert(dest)
+// Dao.Selectx
+func (d *Dao) Selectx(dst any, query string, args ...any) error {
+	return d.Reader().Selectx(dst, query, args...)
 }
 
-// DB.Queryx
-func (db *DB) Queryx(query string, args ...interface{}) (*sqlx.Rows, error) {
-	return db.Reader().Queryx(query, args...)
+// Dao.Exec
+func (d *Dao) Exec(query string, args ...any) (sql.Result, error) {
+	return d.Writer().Exec(query, args...)
 }
 
-// DB.QueryRowx
-func (db *DB) QueryRowx(query string, args ...interface{}) *sqlx.Row {
-	return db.Reader().QueryRowx(query, args...)
+// Dao.Begin
+func (d *Dao) Begin() (*Db, error) {
+	return d.Writer().Begin()
 }
 
-// DB.Selectx
-func (db *DB) Selectx(dest interface{}, query string, args ...interface{}) error {
-	return db.Reader().Selectx(dest, query, args...)
+// Dao.Transaction
+func (d *Dao) Transaction(f func(*Db) error) error {
+	return d.Writer().Transaction(f)
 }
 
-// DB.Exec
-func (db *DB) Exec(query string, args ...interface{}) (sql.Result, error) {
-	return db.Writer().Exec(query, args...)
-}
-
-// DB.Begin
-func (db *DB) Begin() (*Conn, error) {
-	return db.Writer().Begin()
-}
-
-// DB.Transaction
-func (db *DB) Transaction(f func(*Conn) error) error {
-	return db.Writer().Transaction(f)
-}
-
-// Conn
-type Conn struct {
+// Db
+type Db struct {
 	r *sqlx.DB
 	w *sqlx.DB
-	x *sqlx.Tx
+	t *sqlx.Tx
+
+	isDebugMode bool
 }
 
-// Conn.Ping
-func (c *Conn) Ping() error {
-	return c.r.Ping()
+// Db.Ping
+func (x *Db) Ping() error {
+	return x.r.Ping()
 }
 
-// Conn.Count
-func (c *Conn) Count(dest interface{}, where string, args ...interface{}) (int64, error) {
-	sb := NewSQLBuilder(dest)
-	query, args, err := sb.BuildCountSQL(where, args...)
+// Db.Count
+func (x *Db) Count(dst any, where string, args ...any) (int64, error) {
+	sb := NewSqlBuilder(dst)
+	query, args, err := sb.buildCountSQL(where, args...)
 	if err != nil {
 		return 0, err
 	}
 	var count int64
-	err = c.QueryRowx(query, args...).Scan(&count)
-	if sb.IsDebugMode {
-		log.Println("[DEBUG]", query, args)
-	}
+	err = x.QueryRowx(query, args...).Scan(&count)
 	return count, err
 }
 
-// Conn.Select
-func (c *Conn) Select(dest interface{}, where string, args ...interface{}) error {
-	sb := NewSQLBuilder(dest)
-	query, args, err := sb.BuildSelectSQL(where, args...)
+// Db.Select
+func (x *Db) Select(dst any, where string, args ...any) error {
+	sb := NewSqlBuilder(dst)
+	query, args, err := sb.buildSelectSQL(where, args...)
 	if err != nil {
 		return err
 	}
 	if sb.IsSliceValue {
-		err = c.Selectx(dest, query, args...)
+		err = x.Selectx(dst, query, args...)
 	} else {
-		err = c.QueryRowx(query, args...).StructScan(dest)
-	}
-	if sb.IsDebugMode {
-		log.Println("[DEBUG]", query, args)
+		err = x.QueryRowx(query, args...).StructScan(dst)
 	}
 	return err
 }
 
-// Conn.Update
-func (c *Conn) Update(dest interface{}, where string, args ...interface{}) (sql.Result, error) {
-	sb := NewSQLBuilder(dest)
-	query, args, err := sb.BuildUpdateSQL(where, args...)
+// Db.Update
+func (x *Db) Update(dst any, where string, args ...any) (sql.Result, error) {
+	sb := NewSqlBuilder(dst)
+	query, args, err := sb.buildUpdateSQL(where, args...)
 	if err != nil {
 		return nil, err
 	}
-	if sb.IsDebugMode {
-		log.Println("[DEBUG]", query, args)
-	}
-	return c.Exec(query, args...)
+	return x.Exec(query, args...)
 }
 
-// Conn.Delete
-func (c *Conn) Delete(dest interface{}, where string, args ...interface{}) (sql.Result, error) {
-	sb := NewSQLBuilder(dest)
-	query, args, err := sb.BuildDeleteSQL(where, args...)
+// Db.Delete
+func (x *Db) Delete(dst any, where string, args ...any) (sql.Result, error) {
+	sb := NewSqlBuilder(dst)
+	query, args, err := sb.buildDeleteSQL(where, args...)
 	if err != nil {
 		return nil, err
 	}
-	if sb.IsDebugMode {
-		log.Println("[DEBUG]", query, args)
-	}
-	return c.Exec(query, args...)
+	return x.Exec(query, args...)
 }
 
-// Conn.Insert
-func (c *Conn) Insert(dest interface{}) (sql.Result, error) {
-	sb := NewSQLBuilder(dest)
-	query, args, err := sb.BuildInsertSQL()
+// Db.Insert
+func (x *Db) Insert(dst any) (sql.Result, error) {
+	sb := NewSqlBuilder(dst)
+	query, args, err := sb.buildInsertSQL()
+	if err != nil {
+		log.Println(err, query, args)
+		return nil, err
+	}
+	return x.Exec(query, args...)
+}
+
+// Db.Begin
+func (x *Db) Begin() (*Db, error) {
+	tx, err := x.w.Beginx()
 	if err != nil {
 		return nil, err
 	}
-	if sb.IsDebugMode {
-		log.Println("[DEBUG]", query, args)
-	}
-	return c.Exec(query, args...)
+	return &Db{x.r, x.w, tx, x.isDebugMode}, nil
 }
 
-// Conn.Begin
-func (c *Conn) Begin() (*Conn, error) {
-	tx, err := c.w.Beginx()
-	if err != nil {
-		return nil, err
-	}
-	x := &Conn{}
-	x.r = c.r
-	x.w = c.w
-	x.x = tx
-	return x, nil
+// Db.Rollback
+func (x *Db) Rollback() error {
+	t := x.t
+	x.t = nil
+	return t.Rollback()
 }
 
-// Conn.Rollback
-func (c *Conn) Rollback() error {
-	x := c.x
-	c.x = nil
-	return x.Rollback()
+// Db.Commit
+func (x *Db) Commit() error {
+	t := x.t
+	x.t = nil
+	return t.Commit()
 }
 
-// Conn.Commit
-func (c *Conn) Commit() error {
-	x := c.x
-	c.x = nil
-	return x.Commit()
-}
-
-// Conn.Transaction
-func (c *Conn) Transaction(f func(*Conn) error) error {
-	x, err := c.Begin()
+// Db.Transaction
+func (x *Db) Transaction(f func(*Db) error) error {
+	t, err := x.Begin()
 	if err != nil {
 		return err
 	}
-	if err = f(x); err != nil {
-		x.Rollback()
+	if err = f(t); err != nil {
+		t.Rollback()
 		return err
 	}
-	x.Commit()
+	t.Commit()
 	return nil
 }
 
-// Conn.Selectx
-func (c *Conn) Selectx(dest interface{}, query string, args ...interface{}) (err error) {
-	if c.x != nil {
-		err = c.x.Select(dest, query, args...)
+// Db.Selectx
+func (x *Db) Selectx(dst any, query string, args ...any) (err error) {
+	if strings.HasPrefix(strings.ToLower(query), "select *") {
+		if x.t != nil {
+			err = x.t.Unsafe().Select(dst, query, args...)
+		} else {
+			err = x.r.Unsafe().Select(dst, query, args...)
+		}
 	} else {
-		err = c.r.Select(dest, query, args...)
+		if x.t != nil {
+			err = x.t.Select(dst, query, args...)
+		} else {
+			err = x.r.Select(dst, query, args...)
+		}
+	}
+	if x.isDebugMode {
+		log.Println("[DEBUG]", query, args)
 	}
 	return
 }
 
-// Conn.Queryx
-func (c *Conn) Queryx(query string, args ...interface{}) (rows *sqlx.Rows, err error) {
-	if c.x != nil {
-		rows, err = c.x.Queryx(query, args...)
+// Db.Queryx
+func (x *Db) Queryx(query string, args ...any) (rows *sqlx.Rows, err error) {
+	if strings.HasPrefix(strings.ToLower(query), "select *") {
+		if x.t != nil {
+			rows, err = x.t.Unsafe().Queryx(query, args...)
+		} else {
+			rows, err = x.r.Unsafe().Queryx(query, args...)
+		}
 	} else {
-		rows, err = c.r.Queryx(query, args...)
+		if x.t != nil {
+			rows, err = x.t.Queryx(query, args...)
+		} else {
+			rows, err = x.r.Queryx(query, args...)
+		}
+	}
+	if x.isDebugMode {
+		log.Println("[DEBUG]", query, args)
 	}
 	return
 }
 
-// Conn.QueryRowx
-func (c *Conn) QueryRowx(query string, args ...interface{}) (row *sqlx.Row) {
-	if c.x != nil {
-		row = c.x.QueryRowx(query, args...)
+// Db.QueryRowx
+func (x *Db) QueryRowx(query string, args ...any) (row *sqlx.Row) {
+	if strings.HasPrefix(strings.ToLower(query), "select *") {
+		if x.t != nil {
+			row = x.t.Unsafe().QueryRowx(query, args...)
+		} else {
+			row = x.r.Unsafe().QueryRowx(query, args...)
+		}
 	} else {
-		row = c.r.QueryRowx(query, args...)
+		if x.t != nil {
+			row = x.t.QueryRowx(query, args...)
+		} else {
+			row = x.r.QueryRowx(query, args...)
+		}
+	}
+	if x.isDebugMode {
+		log.Println("[DEBUG]", query, args)
 	}
 	return
 }
 
-// Conn.Exec
-func (c *Conn) Exec(query string, args ...interface{}) (res sql.Result, err error) {
-	if c.x != nil {
-		res, err = c.x.Exec(query, args...)
+// Db.Exec
+func (x *Db) Exec(query string, args ...any) (res sql.Result, err error) {
+	if x.t != nil {
+		res, err = x.t.Exec(query, args...)
 	} else {
-		res, err = c.w.Exec(query, args...)
+		res, err = x.w.Exec(query, args...)
+	}
+	if x.isDebugMode {
+		log.Println("[DEBUG]", query, args)
 	}
 	return
 }

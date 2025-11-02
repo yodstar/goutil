@@ -10,90 +10,77 @@ import (
 )
 
 // dbmysql
-var dbmysql *sqlbuilder.DB
+var dbmysql *sqlbuilder.Dao
 
 // MustOpen
-func MustOpen(conf []*sqlbuilder.Conf, options ...bool) {
-	dbmysql = sqlbuilder.MustOpen("mysql", conf)
-	if len(options) > 0 {
-		sqlbuilder.SetDebugMode(options[0])
-		if len(options) > 1 {
-			sqlbuilder.SetModelSuffix(options[1])
-		}
+func MustOpen(options any, args ...string) {
+	dbmysql = sqlbuilder.MustOpen("mysql", options)
+	if len(args) > 0 {
+		sqlbuilder.SetDaoSuffix(args[0])
 	}
 }
 
 // Writer
-func Writer() *sqlbuilder.Conn {
+func Writer() *sqlbuilder.Db {
 	return dbmysql.Writer()
 }
 
 // Reader
-func Reader() *sqlbuilder.Conn {
+func Reader() *sqlbuilder.Db {
 	return dbmysql.Reader()
 }
 
-// Deprecated: Writerx
-func Writerx() *sqlx.DB {
-	return dbmysql.Writerx()
-}
-
-// Deprecated: Readerx
-func Readerx() *sqlx.DB {
-	return dbmysql.Readerx()
-}
-
 // Count
-func Count(dest interface{}, where string, args ...interface{}) (int64, error) {
-	return dbmysql.Count(dest, where, args...)
+func Count(dst any, where string, args ...any) (int64, error) {
+	return dbmysql.Count(dst, where, args...)
 }
 
 // Select
-func Select(dest interface{}, where string, args ...interface{}) error {
-	return dbmysql.Select(dest, where, args...)
+func Select(dst any, where string, args ...any) error {
+	return dbmysql.Select(dst, where, args...)
 }
 
 // Delete
-func Delete(dest interface{}, where string, args ...interface{}) (sql.Result, error) {
-	return dbmysql.Delete(dest, where, args...)
+func Delete(dst any, where string, args ...any) (sql.Result, error) {
+	return dbmysql.Delete(dst, where, args...)
 }
 
 // Update
-func Update(dest interface{}, where string, args ...interface{}) (sql.Result, error) {
-	return dbmysql.Update(dest, where, args...)
+func Update(dst any, where string, args ...any) (sql.Result, error) {
+	return dbmysql.Update(dst, where, args...)
 }
 
 // Insert
-func Insert(dest interface{}) (sql.Result, error) {
-	return dbmysql.Insert(dest)
+func Insert(dst any) (sql.Result, error) {
+	return dbmysql.Insert(dst)
 }
 
 // Selectx
-func Selectx(dest interface{}, query string, args ...interface{}) error {
-	return dbmysql.Reader().Selectx(dest, query, args...)
+func Selectx(dst any, query string, args ...any) error {
+	return dbmysql.Reader().Selectx(dst, query, args...)
 }
 
 // Queryx
-func Queryx(query string, args ...interface{}) (*sqlx.Rows, error) {
+func Queryx(query string, args ...any) (*sqlx.Rows, error) {
 	return dbmysql.Reader().Queryx(query, args...)
 }
 
 // QueryRowx
-func QueryRowx(query string, args ...interface{}) *sqlx.Row {
+func QueryRowx(query string, args ...any) *sqlx.Row {
 	return dbmysql.Reader().QueryRowx(query, args...)
 }
 
 // Exec
-func Exec(query string, args ...interface{}) (sql.Result, error) {
+func Exec(query string, args ...any) (sql.Result, error) {
 	return dbmysql.Writer().Exec(query, args...)
 }
 
 // Begin
-func Begin() (*sqlbuilder.Conn, error) {
+func Begin() (*sqlbuilder.Db, error) {
 	return dbmysql.Writer().Begin()
 }
 
 // Transaction
-func Transaction(f func(*sqlbuilder.Conn) error) error {
+func Transaction(f func(*sqlbuilder.Db) error) error {
 	return dbmysql.Writer().Transaction(f)
 }

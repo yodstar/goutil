@@ -6,57 +6,52 @@ import (
 
 var _ = sqlbuilder.Init("oracle")
 
-// NewSQLBuilder
-func NewSQLBuilder(value interface{}) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.NewSQLBuilder(value)
-}
-
-// Debug
-func Debug(mode bool) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(oracle).Debug(mode)
+// NewSqlBuilder
+func NewSqlBuilder(value any) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.NewSqlBuilder(value)
 }
 
 // Fields
-func Fields(fields string) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(oracle).Fields(fields)
+func Fields(fields string) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.DbSqlBuilder(oracle).Fields(fields)
 }
 
 // Where
-func Where(where string, args ...interface{}) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(oracle).Where(where, args...)
+func Where(where string, args ...any) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.DbSqlBuilder(oracle).Where(where, args...)
 }
 
 // WhereOr
-func WhereOr(where string, args ...interface{}) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(oracle).WhereOr(where, args...)
+func WhereOr(where string, args ...any) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.DbSqlBuilder(oracle).WhereOr(where, args...)
 }
 
 // WhereNot
-func WhereNot(where string, args ...interface{}) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(oracle).WhereNot(where, args...)
+func WhereNot(where string, args ...any) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.DbSqlBuilder(oracle).WhereNot(where, args...)
 }
 
 // GroupBy
-func GroupBy(groupBy string) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(oracle).GroupBy(groupBy)
+func GroupBy(groupBy string) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.DbSqlBuilder(oracle).GroupBy(groupBy)
 }
 
 // Having
-func Having(having string) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(oracle).Having(having)
+func Having(having string) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.DbSqlBuilder(oracle).Having(having)
 }
 
 // OrderBy
-func OrderBy(orderBy string) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(oracle).OrderBy(orderBy)
+func OrderBy(orderBy string) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.DbSqlBuilder(oracle).OrderBy(orderBy)
 }
 
 // Limit
-func Limit(offset int) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(oracle).Limit(offset)
+func Limit(offset int) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.DbSqlBuilder(oracle).Limit(offset)
 }
 
-// Model
-func Model(value interface{}) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(oracle).Model(value)
+// Dao
+func Dao(value any) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.DbSqlBuilder(oracle).Dao(value)
 }

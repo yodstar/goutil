@@ -17,8 +17,8 @@ const TestCreateSQL = `CREATE TABLE IF NOT EXISTS article (
 )`
 
 var (
-	dbConfig  *Conf
-	dbSqlite3 *DB
+	options   *Options
+	dbSqlite3 *Dao
 )
 
 type Article struct {
@@ -31,8 +31,7 @@ type Article struct {
 }
 
 func TestMain(m *testing.M) {
-	dbConfig = &Conf{DataSourceName: "./database_test.db3"}
-	dbSqlite3 = MustOpen("sqlite3", []*Conf{dbConfig})
+	dbSqlite3 = MustOpen("sqlite3", Option{DataSourceName: "./database_test.db3"})
 	m.Run()
 	os.Remove("./database_test.db3")
 }

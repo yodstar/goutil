@@ -14,7 +14,7 @@ type TestArticle struct {
 
 func TestBuildCountSQL(t *testing.T) {
 	a := TestArticle{}
-	query, args, err := NewSQLBuilder(&a).BuildCountSQL("id = ?", 1)
+	query, args, err := NewSqlBuilder(&a).buildCountSQL("id = ?", 1)
 	if err != nil {
 		t.Fail()
 	}
@@ -23,7 +23,7 @@ func TestBuildCountSQL(t *testing.T) {
 
 func TestBuildSelectSQL(t *testing.T) {
 	a := TestArticle{}
-	query, args, err := NewSQLBuilder(&a).BuildSelectSQL("id IN (?) ORDER BY id DESC LIMIT 5", []int{1, 2, 3, 4, 5, 6, 7, 8, 9})
+	query, args, err := NewSqlBuilder(&a).buildSelectSQL("id IN (?) ORDER BY id DESC LIMIT 5", []int{1, 2, 3, 4, 5, 6, 7, 8, 9})
 	if err != nil {
 		t.Fail()
 	}
@@ -32,7 +32,7 @@ func TestBuildSelectSQL(t *testing.T) {
 
 func TestBuildDeleteSQL(t *testing.T) {
 	a := TestArticle{}
-	query, args, err := NewSQLBuilder(&a).BuildDeleteSQL("id IN (?)", []int{1, 2, 3, 4, 5, 6, 7, 8, 9})
+	query, args, err := NewSqlBuilder(&a).buildDeleteSQL("id IN (?)", []int{1, 2, 3, 4, 5, 6, 7, 8, 9})
 	if err != nil {
 		t.Fail()
 	}
@@ -41,7 +41,7 @@ func TestBuildDeleteSQL(t *testing.T) {
 
 func TestBuildUpdateSQL(t *testing.T) {
 	a := TestArticle{ID: 1, Title: "Title", Content: "Content"}
-	query, args, err := NewSQLBuilder(&a).BuildUpdateSQL("id = :id")
+	query, args, err := NewSqlBuilder(&a).buildUpdateSQL("id = :id")
 	if err != nil {
 		t.Fail()
 	}
@@ -50,7 +50,7 @@ func TestBuildUpdateSQL(t *testing.T) {
 
 func TestBuildInsertSQL(t *testing.T) {
 	a := TestArticle{Title: "Title", Content: "Content"}
-	query, args, err := NewSQLBuilder(&a).BuildInsertSQL()
+	query, args, err := NewSqlBuilder(&a).buildInsertSQL()
 	if err != nil {
 		t.Fail()
 	}
@@ -59,7 +59,7 @@ func TestBuildInsertSQL(t *testing.T) {
 
 func TestNewSqlBuilder(t *testing.T) {
 	a := TestArticle{}
-	sb := NewSQLBuilder(&a)
+	sb := NewSqlBuilder(&a)
 	if sb.Error != nil {
 		t.Fail()
 	}
@@ -68,7 +68,7 @@ func TestNewSqlBuilder(t *testing.T) {
 
 func TestSQLBuilderFields(t *testing.T) {
 	a := TestArticle{}
-	query, args, err := NewSQLBuilder(&a).Fields("id, title").BuildSelectSQL("id = ?", 1)
+	query, args, err := NewSqlBuilder(&a).Fields("id, title").buildSelectSQL("id = ?", 1)
 	if err != nil {
 		t.Fail()
 	}
@@ -77,20 +77,20 @@ func TestSQLBuilderFields(t *testing.T) {
 
 func TestSQLBuilderWhere(t *testing.T) {
 	a := TestArticle{}
-	sb := NewSQLBuilder(&a)
-	query, args, err := sb.Where("id = ?", 1).Fields("id, title").SelectSQL()
+	sb := NewSqlBuilder(&a)
+	query, args, err := sb.Where("id = ?", 1).Fields("id, title").buildSelectSQL(sb.sqlWhere)
 	if err != nil {
 		t.Fail()
 	}
 	t.Log(query, args, err)
 
-	query, args, err = sb.WhereOr("id = ?", 2).DeleteSQL()
+	query, args, err = sb.WhereOr("id = ?", 2).buildDeleteSQL(sb.sqlWhere)
 	if err != nil {
 		t.Fail()
 	}
 	t.Log(query, args, err)
 
-	query, args, err = sb.Fields("id, title").WhereNot("id = ?", 3).UpdateSQL()
+	query, args, err = sb.Fields("id, title").WhereNot("id = ?", 3).buildUpdateSQL(sb.sqlWhere)
 	if err != nil {
 		t.Fail()
 	}
@@ -99,8 +99,8 @@ func TestSQLBuilderWhere(t *testing.T) {
 
 func TestSQLBuilderGroupBy(t *testing.T) {
 	a := TestArticle{}
-	sb := NewSQLBuilder(&a)
-	query, args, err := sb.Fields("id, title").Where("id = ?", 1).GroupBy("type").SelectSQL()
+	sb := NewSqlBuilder(&a)
+	query, args, err := sb.Fields("id, title").Where("id = ?", 1).GroupBy("type").buildSelectSQL(sb.sqlWhere)
 	if err != nil {
 		t.Fail()
 	}
@@ -109,8 +109,8 @@ func TestSQLBuilderGroupBy(t *testing.T) {
 
 func TestSQLBuilderHaving(t *testing.T) {
 	a := TestArticle{}
-	sb := NewSQLBuilder(&a)
-	query, args, err := sb.Fields("id, title").Where("id = ?", 1).GroupBy("type").Having("COUNT(1) > 0").SelectSQL()
+	sb := NewSqlBuilder(&a)
+	query, args, err := sb.Fields("id, title").Where("id = ?", 1).GroupBy("type").Having("COUNT(1) > 0").buildSelectSQL(sb.sqlWhere)
 	if err != nil {
 		t.Fail()
 	}
@@ -119,8 +119,8 @@ func TestSQLBuilderHaving(t *testing.T) {
 
 func TestSQLBuilderOrderBy(t *testing.T) {
 	a := TestArticle{}
-	sb := NewSQLBuilder(&a)
-	query, args, err := sb.Fields("id, title").Where("type = ?", 1).OrderBy("id DESC").SelectSQL()
+	sb := NewSqlBuilder(&a)
+	query, args, err := sb.Fields("id, title").Where("type = ?", 1).OrderBy("id DESC").buildSelectSQL(sb.sqlWhere)
 	if err != nil {
 		t.Fail()
 	}
@@ -129,8 +129,8 @@ func TestSQLBuilderOrderBy(t *testing.T) {
 
 func TestSQLBuilderLimit(t *testing.T) {
 	a := TestArticle{}
-	sb := NewSQLBuilder(&a)
-	query, args, err := sb.Fields("id, title").Where("type = ?", 1).OrderBy("id DESC").Limit(1).SelectSQL()
+	sb := NewSqlBuilder(&a)
+	query, args, err := sb.Fields("id, title").Where("type = ?", 1).OrderBy("id DESC").Limit(1).buildSelectSQL(sb.sqlWhere)
 	if err != nil {
 		t.Fail()
 	}
@@ -139,7 +139,7 @@ func TestSQLBuilderLimit(t *testing.T) {
 
 func TestSQLBuilderInsert(t *testing.T) {
 	a := TestArticle{}
-	query, args, err := NewSQLBuilder(&a).Fields("id, title").InsertSQL()
+	query, args, err := NewSqlBuilder(&a).Fields("id, title").buildInsertSQL()
 	if err != nil {
 		t.Fail()
 	}

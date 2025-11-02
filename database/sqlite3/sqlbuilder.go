@@ -6,57 +6,52 @@ import (
 
 var _ = sqlbuilder.Init("sqlite3")
 
-// NewSQLBuilder
-func NewSQLBuilder(value interface{}) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.NewSQLBuilder(value)
-}
-
-// Debug
-func Debug(mode bool) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(sqlite3).Debug(mode)
+// NewSqlBuilder
+func NewSqlBuilder(value any) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.NewSqlBuilder(value)
 }
 
 // Fields
-func Fields(fields string) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(sqlite3).Fields(fields)
+func Fields(fields string) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.DbSqlBuilder(sqlite3).Fields(fields)
 }
 
 // Where
-func Where(where string, args ...interface{}) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(sqlite3).Where(where, args...)
+func Where(where string, args ...any) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.DbSqlBuilder(sqlite3).Where(where, args...)
 }
 
 // WhereOr
-func WhereOr(where string, args ...interface{}) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(sqlite3).WhereOr(where, args...)
+func WhereOr(where string, args ...any) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.DbSqlBuilder(sqlite3).WhereOr(where, args...)
 }
 
 // WhereNot
-func WhereNot(where string, args ...interface{}) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(sqlite3).WhereNot(where, args...)
+func WhereNot(where string, args ...any) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.DbSqlBuilder(sqlite3).WhereNot(where, args...)
 }
 
 // GroupBy
-func GroupBy(groupBy string) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(sqlite3).GroupBy(groupBy)
+func GroupBy(groupBy string) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.DbSqlBuilder(sqlite3).GroupBy(groupBy)
 }
 
 // Having
-func Having(having string) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(sqlite3).Having(having)
+func Having(having string) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.DbSqlBuilder(sqlite3).Having(having)
 }
 
 // OrderBy
-func OrderBy(orderBy string) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(sqlite3).OrderBy(orderBy)
+func OrderBy(orderBy string) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.DbSqlBuilder(sqlite3).OrderBy(orderBy)
 }
 
 // Limit
-func Limit(offset int) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(sqlite3).Limit(offset)
+func Limit(offset int) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.DbSqlBuilder(sqlite3).Limit(offset)
 }
 
-// Model
-func Model(value interface{}) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(sqlite3).Model(value)
+// Dao
+func Dao(value any) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.DbSqlBuilder(sqlite3).Dao(value)
 }

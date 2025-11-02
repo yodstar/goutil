@@ -6,57 +6,52 @@ import (
 
 var _ = sqlbuilder.Init("dbmysql")
 
-// NewSQLBuilder
-func NewSQLBuilder(value interface{}) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.NewSQLBuilder(value)
-}
-
-// Debug
-func Debug(mode bool) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(dbmysql).Debug(mode)
+// NewSqlBuilder
+func NewSqlBuilder(value any) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.NewSqlBuilder(value)
 }
 
 // Fields
-func Fields(fields string) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(dbmysql).Fields(fields)
+func Fields(fields string) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.DbSqlBuilder(dbmysql).Fields(fields)
 }
 
 // Where
-func Where(where string, args ...interface{}) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(dbmysql).Where(where, args...)
+func Where(where string, args ...any) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.DbSqlBuilder(dbmysql).Where(where, args...)
 }
 
 // WhereOr
-func WhereOr(where string, args ...interface{}) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(dbmysql).WhereOr(where, args...)
+func WhereOr(where string, args ...any) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.DbSqlBuilder(dbmysql).WhereOr(where, args...)
 }
 
 // WhereNot
-func WhereNot(where string, args ...interface{}) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(dbmysql).WhereNot(where, args...)
+func WhereNot(where string, args ...any) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.DbSqlBuilder(dbmysql).WhereNot(where, args...)
 }
 
 // GroupBy
-func GroupBy(groupBy string) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(dbmysql).GroupBy(groupBy)
+func GroupBy(groupBy string) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.DbSqlBuilder(dbmysql).GroupBy(groupBy)
 }
 
 // Having
-func Having(having string) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(dbmysql).Having(having)
+func Having(having string) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.DbSqlBuilder(dbmysql).Having(having)
 }
 
 // OrderBy
-func OrderBy(orderBy string) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(dbmysql).OrderBy(orderBy)
+func OrderBy(orderBy string) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.DbSqlBuilder(dbmysql).OrderBy(orderBy)
 }
 
 // Limit
-func Limit(offset int) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(dbmysql).Limit(offset)
+func Limit(offset int) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.DbSqlBuilder(dbmysql).Limit(offset)
 }
 
-// Model
-func Model(value interface{}) *sqlbuilder.SQLBuilder {
-	return sqlbuilder.DBSQLBuilder(dbmysql).Model(value)
+// Dao
+func Dao(value any) *sqlbuilder.SqlBuilder {
+	return sqlbuilder.DbSqlBuilder(dbmysql).Dao(value)
 }
