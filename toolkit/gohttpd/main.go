@@ -59,7 +59,7 @@ func main() {
 		} else if strings.HasPrefix(path, "http://") {
 			target, err := url.Parse(path)
 			if err != nil {
-				panic(err.Error())
+				panic(err)
 			}
 			proxy := httputil.NewSingleHostReverseProxy(target)
 			proxy.ModifyResponse = func(resp *http.Response) error {
@@ -77,6 +77,6 @@ func main() {
 	// listen
 	log.Printf("%s listen on %s", name, conf.Listen)
 	if err := http.ListenAndServe(conf.Listen, nil); err != nil {
-		panic(err.Error())
+		panic(err)
 	}
 }
