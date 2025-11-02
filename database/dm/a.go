@@ -14,7 +14,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"database/dm/security"
+	"github.com/yodstar/goutil/database/dm/security"
 )
 
 const (

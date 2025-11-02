@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"database/dm/util"
+	"github.com/yodstar/goutil/database/dm/util"
 )
 
 var DB2G db2g

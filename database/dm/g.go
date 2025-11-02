@@ -15,7 +15,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"database/dm/util"
+	"github.com/yodstar/goutil/database/dm/util"
 )
 
 type ExecuteTypeEnum int

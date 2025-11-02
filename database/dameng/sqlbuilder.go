@@ -1,7 +1,7 @@
 package dameng
 
 import (
-	"database/sqlbuilder"
+	"github.com/yodstar/goutil/database/sqlbuilder"
 )
 
 var _ = sqlbuilder.Init("dameng")

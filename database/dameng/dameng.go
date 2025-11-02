@@ -4,11 +4,10 @@ import (
 	"database/sql"
 
 	// dameng driver
-	_ "database/dm"
-
-	"database/sqlbuilder"
+	_ "github.com/yodstar/goutil/database/dm"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/yodstar/goutil/database/sqlbuilder"
 )
 
 // dameng
