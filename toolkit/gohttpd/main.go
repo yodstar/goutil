@@ -22,9 +22,9 @@ func main() {
 
 	//chroot
 	if file, err := os.Executable(); err != nil {
-		panic(err.Error())
+		panic(err)
 	} else if err = os.Chdir(filepath.Dir(file)); err != nil {
-		panic(err.Error())
+		panic(err)
 	} else {
 		name = strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))
 		path := flag.String("c", fmt.Sprintf("./%s.conf", name), "Config file path")
@@ -32,14 +32,14 @@ func main() {
 
 		data, err := os.ReadFile(*path)
 		if err != nil {
-			panic(err.Error())
+			panic(err)
 		}
 
 		if err := json.Unmarshal(data, &conf); err != nil {
-			panic(err.Error())
+			panic(err)
 		}
 	}
-	log.SetFlags(log.Lshortfile)
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	// routes
 	rewrite := make(map[string]string)
