@@ -38,6 +38,7 @@ type SqlBuilder struct {
 	*dbSqlBuilder
 	dao          *Dao
 	bindValue    any
+	driverName   string
 	tableName    string
 	sqlFields    string
 	sqlUpdates   string
@@ -359,7 +360,7 @@ func (sb *SqlBuilder) Dao(value any) *SqlBuilder {
 	if sb.dbSqlBuilder != nil {
 		return sb
 	}
-	sb.dbSqlBuilder = cachedDbSqlBuilder(rt)
+	sb.dbSqlBuilder = sb.cachedDbSqlBuilder(rt)
 	if sb.tableName == "" {
 		sb.tableName = sb.dbSqlBuilder.tableName
 	}
@@ -379,14 +380,15 @@ func (sb *SqlBuilder) Database(dao *Dao) *SqlBuilder {
 }
 
 // NewSqlBuilder
-func NewSqlBuilder(value any) (sb *SqlBuilder) {
-	sb = &SqlBuilder{
-		sqlArgs: []any{},
+func NewSqlBuilder(driverName string, value any) *SqlBuilder {
+	sb := &SqlBuilder{
+		driverName: driverName,
+		sqlArgs:    []any{},
 	}
 	if value != nil {
 		sb.Dao(value)
 	}
-	return
+	return sb
 }
 
 // DbSqlBuilder
@@ -395,6 +397,7 @@ func DbSqlBuilder(dao *Dao) (sb *SqlBuilder) {
 		sqlArgs: []any{},
 	}
 	if dao != nil {
+		sb.driverName = dao.driverName
 		sb.dao = dao
 	}
 	return
@@ -412,19 +415,19 @@ type dbSqlBuilder struct {
 var dbSqlBuilderCache sync.Map // map[reflect.Type]dbSqlBuilder
 
 // cachedDbSqlBuilder
-func cachedDbSqlBuilder(rt reflect.Type) *dbSqlBuilder {
-	if sb, ok := dbSqlBuilderCache.Load(rt); ok {
-		return sb.(*dbSqlBuilder)
+func (sb *SqlBuilder) cachedDbSqlBuilder(rt reflect.Type) *dbSqlBuilder {
+	if db, ok := dbSqlBuilderCache.Load(rt); ok {
+		return db.(*dbSqlBuilder)
 	}
-	sb, _ := dbSqlBuilderCache.LoadOrStore(rt, reflectDbSqlBuilder(rt))
-	return sb.(*dbSqlBuilder)
+	db, _ := dbSqlBuilderCache.LoadOrStore(rt, sb.reflectDbSqlBuilder(rt))
+	return db.(*dbSqlBuilder)
 }
 
 // reflectDbSqlBuilder
-func reflectDbSqlBuilder(rt reflect.Type) (sb *dbSqlBuilder) {
-	sb = &dbSqlBuilder{}
+func (sb *SqlBuilder) reflectDbSqlBuilder(rt reflect.Type) *dbSqlBuilder {
+	db := &dbSqlBuilder{}
 	if rm := reflect.New(rt).MethodByName("TableName"); rm.IsValid() {
-		sb.tableName = rm.Call(nil)[0].Interface().(string)
+		db.tableName = rm.Call(nil)[0].Interface().(string)
 	} else {
 		var r []rune
 		for i, c := range rt.Name() {
@@ -436,14 +439,14 @@ func reflectDbSqlBuilder(rt reflect.Type) (sb *dbSqlBuilder) {
 			}
 			r = append(r, c)
 		}
-		sb.tableName = strings.TrimSuffix(string(r), sqlDaoSuffix)
+		db.tableName = strings.TrimSuffix(string(r), sqlDaoSuffix)
 	}
 	var fields, columns, updates, values []string
 	if rt.Kind() == reflect.Struct {
 		for i := 0; i < rt.NumField(); i++ {
 			f := rt.Field(i)
 			k := f.Tag.Get("db")
-			v := f.Tag.Get(sqlbuilderName)
+			v := f.Tag.Get(sb.driverName)
 			if k == "" || k == "-" {
 				continue
 			}
@@ -461,11 +464,11 @@ func reflectDbSqlBuilder(rt reflect.Type) (sb *dbSqlBuilder) {
 			}
 		}
 	}
-	sb.sqlFields = strings.Join(fields, ", ")
-	sb.sqlColumns = strings.Join(columns, ", ")
-	sb.sqlUpdates = strings.Join(updates, ", ")
-	sb.sqlValues = strings.Join(values, ", ")
-	return sb
+	db.sqlFields = strings.Join(fields, ", ")
+	db.sqlColumns = strings.Join(columns, ", ")
+	db.sqlUpdates = strings.Join(updates, ", ")
+	db.sqlValues = strings.Join(values, ", ")
+	return db
 }
 
 // reflectDeref is Indirect for reflect.Types

@@ -4,7 +4,7 @@ import (
 	"database/sql"
 
 	// clickhouse driver
-	"database/sqlbuilder"
+	"github.com/yodstar/goutil/database/sqlbuilder"
 
 	_ "github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/jmoiron/sqlx"

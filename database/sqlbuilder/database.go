@@ -22,14 +22,15 @@ type Options []*Option
 
 // Dao
 type Dao struct {
-	unsafe bool
-	db     []*Db
-	n      int
+	driverName string
+	unsafe     bool
+	db         []*Db
+	n          int
 }
 
 // MustOpen
 func MustOpen(driverName string, option any) *Dao {
-	dao := &Dao{}
+	dao := &Dao{driverName: driverName}
 	if options, ok := option.(Options); ok {
 		dao.db = make([]*Db, len(options))
 		for i, v := range options {
@@ -40,6 +41,7 @@ func MustOpen(driverName string, option any) *Dao {
 			if v.MaxIdleConns > 0 {
 				x.r.SetMaxIdleConns(v.MaxIdleConns)
 			}
+			x.driverName = driverName
 			x.isDebugMode = v.IsDebugMode
 			x.r.Ping()
 			if i == 0 {
@@ -56,6 +58,7 @@ func MustOpen(driverName string, option any) *Dao {
 		if v.MaxIdleConns > 0 {
 			x.r.SetMaxIdleConns(v.MaxIdleConns)
 		}
+		x.driverName = driverName
 		x.isDebugMode = v.IsDebugMode
 		x.r.Ping()
 		x.w = x.r
@@ -193,6 +196,7 @@ type Db struct {
 	w *sqlx.DB
 	t *sqlx.Tx
 
+	driverName  string
 	isDebugMode bool
 }
 
@@ -203,7 +207,7 @@ func (x *Db) Ping() error {
 
 // Db.Count
 func (x *Db) Count(dst any, where string, args ...any) (int64, error) {
-	sb := NewSqlBuilder(dst)
+	sb := NewSqlBuilder(x.driverName, dst)
 	query, args, err := sb.buildCountSQL(where, args...)
 	if err != nil {
 		return 0, err
@@ -215,7 +219,7 @@ func (x *Db) Count(dst any, where string, args ...any) (int64, error) {
 
 // Db.Select
 func (x *Db) Select(dst any, where string, args ...any) error {
-	sb := NewSqlBuilder(dst)
+	sb := NewSqlBuilder(x.driverName, dst)
 	query, args, err := sb.buildSelectSQL(where, args...)
 	if err != nil {
 		return err
@@ -230,7 +234,7 @@ func (x *Db) Select(dst any, where string, args ...any) error {
 
 // Db.Update
 func (x *Db) Update(dst any, where string, args ...any) (sql.Result, error) {
-	sb := NewSqlBuilder(dst)
+	sb := NewSqlBuilder(x.driverName, dst)
 	query, args, err := sb.buildUpdateSQL(where, args...)
 	if err != nil {
 		return nil, err
@@ -240,7 +244,7 @@ func (x *Db) Update(dst any, where string, args ...any) (sql.Result, error) {
 
 // Db.Delete
 func (x *Db) Delete(dst any, where string, args ...any) (sql.Result, error) {
-	sb := NewSqlBuilder(dst)
+	sb := NewSqlBuilder(x.driverName, dst)
 	query, args, err := sb.buildDeleteSQL(where, args...)
 	if err != nil {
 		return nil, err
@@ -250,7 +254,7 @@ func (x *Db) Delete(dst any, where string, args ...any) (sql.Result, error) {
 
 // Db.Insert
 func (x *Db) Insert(dst any) (sql.Result, error) {
-	sb := NewSqlBuilder(dst)
+	sb := NewSqlBuilder(x.driverName, dst)
 	query, args, err := sb.buildInsertSQL()
 	if err != nil {
 		log.Println(err, query, args)
@@ -265,7 +269,7 @@ func (x *Db) Begin() (*Db, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Db{x.r, x.w, tx, x.isDebugMode}, nil
+	return &Db{x.r, x.w, tx, x.driverName, x.isDebugMode}, nil
 }
 
 // Db.Rollback

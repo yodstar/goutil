@@ -1,14 +1,14 @@
 package clickhouse
 
 import (
-	"database/sqlbuilder"
+	"github.com/yodstar/goutil/database/sqlbuilder"
 )
 
 var _ = sqlbuilder.Init("clickhouse")
 
 // NewSqlBuilder
 func NewSqlBuilder(value any) *sqlbuilder.SqlBuilder {
-	return sqlbuilder.NewSqlBuilder(value)
+	return sqlbuilder.NewSqlBuilder("clickhouse", value)
 }
 
 // Fields
