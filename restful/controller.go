@@ -2,6 +2,7 @@ package restful
 
 import (
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -112,8 +113,8 @@ func (c *Controller) Redirect(uri string) {
 	http.Redirect(c.Ctx.ResponseWriter, c.Ctx.Request, uri, http.StatusFound)
 }
 
-// Controller.AddHeader
-func (c *Controller) AddHeader(key, value string) {
+// Controller.SetHeader
+func (c *Controller) SetHeader(key, value string) {
 	c.Ctx.ResponseWriter.Header().Set(key, value)
 }
 
@@ -129,15 +130,18 @@ func (c *Controller) WriteJSON(v interface{}) (err error) {
 	if err != nil {
 		return err
 	}
-	c.Ctx.ResponseWriter.Header().Set("Content-Type", "application/json")
+	c.SetHeader("Content-Length", fmt.Sprintf("%d", len(data)))
+	c.SetHeader("Content-Type", "application/json;charset=UTF-8")
 	_, err = c.Ctx.ResponseWriter.Write(data)
 	return err
 }
 
 // Controller.WriteHTML
 func (c *Controller) WriteHTML(html ...string) (err error) {
-	c.Ctx.ResponseWriter.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, err = c.Ctx.ResponseWriter.Write([]byte(strings.Join(html, "")))
+	data := []byte(strings.Join(html, ""))
+	c.SetHeader("Content-Length", fmt.Sprintf("%d", len(data)))
+	c.SetHeader("Content-Type", "text/html;charset=UTF-8")
+	_, err = c.Ctx.ResponseWriter.Write(data)
 	return err
 }
 
