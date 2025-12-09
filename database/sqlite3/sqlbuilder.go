@@ -8,7 +8,7 @@ var _ = sqlbuilder.Init("sqlite3")
 
 // NewSqlBuilder
 func NewSqlBuilder(value any) *sqlbuilder.SqlBuilder {
-	return sqlbuilder.NewSqlBuilder(value)
+	return sqlbuilder.NewSqlBuilder("sqlite3", value)
 }
 
 // Fields

@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"log"
 	"math/rand"
-	"strings"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -145,6 +144,11 @@ func (d *Dao) Select(dst any, where string, args ...any) error {
 	return d.Reader().Select(dst, where, args...)
 }
 
+// Dao.UnsafeSelect
+func (d *Dao) UnsafeSelect(dst any, where string, args ...any) error {
+	return d.Reader().UnsafeSelect(dst, where, args...)
+}
+
 // Dao.Update
 func (d *Dao) Update(dst any, where string, args ...any) (sql.Result, error) {
 	return d.Writer().Update(dst, where, args...)
@@ -232,6 +236,21 @@ func (x *Db) Select(dst any, where string, args ...any) error {
 	return err
 }
 
+// Db.UnsafeSelect
+func (x *Db) UnsafeSelect(dst any, where string, args ...any) error {
+	sb := NewSqlBuilder(x.driverName, dst)
+	query, args, err := sb.buildSelectSQL(where, args...)
+	if err != nil {
+		return err
+	}
+	if sb.IsSliceValue {
+		err = x.UnsafeSelectx(dst, query, args...)
+	} else {
+		err = x.UnsafeQueryRowx(query, args...).StructScan(dst)
+	}
+	return err
+}
+
 // Db.Update
 func (x *Db) Update(dst any, where string, args ...any) (sql.Result, error) {
 	sb := NewSqlBuilder(x.driverName, dst)
@@ -302,18 +321,23 @@ func (x *Db) Transaction(f func(*Db) error) error {
 
 // Db.Selectx
 func (x *Db) Selectx(dst any, query string, args ...any) (err error) {
-	if strings.HasPrefix(strings.ToLower(query), "select *") {
-		if x.t != nil {
-			err = x.t.Unsafe().Select(dst, query, args...)
-		} else {
-			err = x.r.Unsafe().Select(dst, query, args...)
-		}
+	if x.t != nil {
+		err = x.t.Select(dst, query, args...)
 	} else {
-		if x.t != nil {
-			err = x.t.Select(dst, query, args...)
-		} else {
-			err = x.r.Select(dst, query, args...)
-		}
+		err = x.r.Select(dst, query, args...)
+	}
+	if x.isDebugMode {
+		log.Println("[DEBUG]", query, args)
+	}
+	return
+}
+
+// Db.UnsafeSelectx
+func (x *Db) UnsafeSelectx(dst any, query string, args ...any) (err error) {
+	if x.t != nil {
+		err = x.t.Unsafe().Select(dst, query, args...)
+	} else {
+		err = x.r.Unsafe().Select(dst, query, args...)
 	}
 	if x.isDebugMode {
 		log.Println("[DEBUG]", query, args)
@@ -323,18 +347,23 @@ func (x *Db) Selectx(dst any, query string, args ...any) (err error) {
 
 // Db.Queryx
 func (x *Db) Queryx(query string, args ...any) (rows *sqlx.Rows, err error) {
-	if strings.HasPrefix(strings.ToLower(query), "select *") {
-		if x.t != nil {
-			rows, err = x.t.Unsafe().Queryx(query, args...)
-		} else {
-			rows, err = x.r.Unsafe().Queryx(query, args...)
-		}
+	if x.t != nil {
+		rows, err = x.t.Queryx(query, args...)
 	} else {
-		if x.t != nil {
-			rows, err = x.t.Queryx(query, args...)
-		} else {
-			rows, err = x.r.Queryx(query, args...)
-		}
+		rows, err = x.r.Queryx(query, args...)
+	}
+	if x.isDebugMode {
+		log.Println("[DEBUG]", query, args)
+	}
+	return
+}
+
+// Db.UnsafeQueryx
+func (x *Db) UnsafeQueryx(query string, args ...any) (rows *sqlx.Rows, err error) {
+	if x.t != nil {
+		rows, err = x.t.Unsafe().Queryx(query, args...)
+	} else {
+		rows, err = x.r.Unsafe().Queryx(query, args...)
 	}
 	if x.isDebugMode {
 		log.Println("[DEBUG]", query, args)
@@ -344,18 +373,23 @@ func (x *Db) Queryx(query string, args ...any) (rows *sqlx.Rows, err error) {
 
 // Db.QueryRowx
 func (x *Db) QueryRowx(query string, args ...any) (row *sqlx.Row) {
-	if strings.HasPrefix(strings.ToLower(query), "select *") {
-		if x.t != nil {
-			row = x.t.Unsafe().QueryRowx(query, args...)
-		} else {
-			row = x.r.Unsafe().QueryRowx(query, args...)
-		}
+	if x.t != nil {
+		row = x.t.QueryRowx(query, args...)
 	} else {
-		if x.t != nil {
-			row = x.t.QueryRowx(query, args...)
-		} else {
-			row = x.r.QueryRowx(query, args...)
-		}
+		row = x.r.QueryRowx(query, args...)
+	}
+	if x.isDebugMode {
+		log.Println("[DEBUG]", query, args)
+	}
+	return
+}
+
+// Db.UnsafeQueryRowx
+func (x *Db) UnsafeQueryRowx(query string, args ...any) (row *sqlx.Row) {
+	if x.t != nil {
+		row = x.t.Unsafe().QueryRowx(query, args...)
+	} else {
+		row = x.r.Unsafe().QueryRowx(query, args...)
 	}
 	if x.isDebugMode {
 		log.Println("[DEBUG]", query, args)

@@ -41,6 +41,11 @@ func Select(dst any, where string, args ...any) error {
 	return clickhouse.Select(dst, where, args...)
 }
 
+// UnsafeSelect
+func UnsafeSelect(dst any, where string, args ...any) error {
+	return clickhouse.UnsafeSelect(dst, where, args...)
+}
+
 // Delete
 func Delete(dst any, where string, args ...any) (sql.Result, error) {
 	return clickhouse.Delete(dst, where, args...)
@@ -61,14 +66,29 @@ func Selectx(dst any, query string, args ...any) error {
 	return clickhouse.Reader().Selectx(dst, query, args...)
 }
 
+// UnsafeSelectx
+func UnsafeSelectx(dst any, query string, args ...any) error {
+	return clickhouse.Reader().UnsafeSelectx(dst, query, args...)
+}
+
 // Queryx
 func Queryx(query string, args ...any) (*sqlx.Rows, error) {
 	return clickhouse.Reader().Queryx(query, args...)
 }
 
+// UnsafeQueryx
+func UnsafeQueryx(query string, args ...any) (*sqlx.Rows, error) {
+	return clickhouse.Reader().UnsafeQueryx(query, args...)
+}
+
 // QueryRowx
 func QueryRowx(query string, args ...any) *sqlx.Row {
 	return clickhouse.Reader().QueryRowx(query, args...)
+}
+
+// UnsafeQueryRowx
+func UnsafeQueryRowx(query string, args ...any) *sqlx.Row {
+	return clickhouse.Reader().UnsafeQueryRowx(query, args...)
 }
 
 // Exec

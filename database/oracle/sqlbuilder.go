@@ -8,7 +8,7 @@ var _ = sqlbuilder.Init("oracle")
 
 // NewSqlBuilder
 func NewSqlBuilder(value any) *sqlbuilder.SqlBuilder {
-	return sqlbuilder.NewSqlBuilder(value)
+	return sqlbuilder.NewSqlBuilder("oracle", value)
 }
 
 // Fields

@@ -41,6 +41,11 @@ func Select(dst any, where string, args ...any) error {
 	return dameng.Select(dst, where, args...)
 }
 
+// UnsafeSelect
+func UnsafeSelect(dst any, where string, args ...any) error {
+	return dameng.UnsafeSelect(dst, where, args...)
+}
+
 // Delete
 func Delete(dst any, where string, args ...any) (sql.Result, error) {
 	return dameng.Delete(dst, where, args...)
@@ -61,14 +66,29 @@ func Selectx(dst any, query string, args ...any) error {
 	return dameng.Reader().Selectx(dst, query, args...)
 }
 
+// UnsafeSelectx
+func UnsafeSelectx(dst any, query string, args ...any) error {
+	return dameng.Reader().Selectx(dst, query, args...)
+}
+
 // Queryx
 func Queryx(query string, args ...any) (*sqlx.Rows, error) {
 	return dameng.Reader().Queryx(query, args...)
 }
 
+// UnsafeQueryx
+func UnsafeQueryx(query string, args ...any) (*sqlx.Rows, error) {
+	return dameng.Reader().UnsafeQueryx(query, args...)
+}
+
 // QueryRowx
 func QueryRowx(query string, args ...any) *sqlx.Row {
 	return dameng.Reader().QueryRowx(query, args...)
+}
+
+// UnsafeQueryRowx
+func UnsafeQueryRowx(query string, args ...any) *sqlx.Row {
+	return dameng.Reader().UnsafeQueryRowx(query, args...)
 }
 
 // Exec

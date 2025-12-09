@@ -40,6 +40,11 @@ func Select(dst any, where string, args ...any) error {
 	return dbmysql.Select(dst, where, args...)
 }
 
+// UnsafeSelect
+func UnsafeSelect(dst any, where string, args ...any) error {
+	return dbmysql.UnsafeSelect(dst, where, args...)
+}
+
 // Delete
 func Delete(dst any, where string, args ...any) (sql.Result, error) {
 	return dbmysql.Delete(dst, where, args...)
@@ -60,14 +65,29 @@ func Selectx(dst any, query string, args ...any) error {
 	return dbmysql.Reader().Selectx(dst, query, args...)
 }
 
+// UnsafeSelectx
+func UnsafeSelectx(dst any, query string, args ...any) error {
+	return dbmysql.Reader().UnsafeSelectx(dst, query, args...)
+}
+
 // Queryx
 func Queryx(query string, args ...any) (*sqlx.Rows, error) {
 	return dbmysql.Reader().Queryx(query, args...)
 }
 
+// UnsafeQueryx
+func UnsafeQueryx(query string, args ...any) (*sqlx.Rows, error) {
+	return dbmysql.Reader().UnsafeQueryx(query, args...)
+}
+
 // QueryRowx
 func QueryRowx(query string, args ...any) *sqlx.Row {
 	return dbmysql.Reader().QueryRowx(query, args...)
+}
+
+// UnsafeQueryRowx
+func UnsafeQueryRowx(query string, args ...any) *sqlx.Row {
+	return dbmysql.Reader().UnsafeQueryRowx(query, args...)
 }
 
 // Exec
